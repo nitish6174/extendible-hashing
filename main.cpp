@@ -2,10 +2,6 @@
 using namespace std;
 
 
-#define BUCKET_SIZE 2
-#define INITIAL_GLOBAL_DEPTH 1
-
-
 class Bucket {
         int depth,size;
         std::map<int, string> values;
@@ -45,26 +41,29 @@ class Directory {
 };
 
 
-void input_process(Directory d,bool show_messages);
 int menu(bool show_messages);
-
 
 
 /* Main function */
 
 int main()
 {
-    Directory d(INITIAL_GLOBAL_DEPTH,BUCKET_SIZE);
-    input_process(d,1);
-    return 0;
-}
-
-/* Utility function to take input and call function accordingly */
-
-void input_process(Directory d,bool show_messages)
-{
+    bool show_messages;
+    int bucket_size, initial_global_depth;
     int choice, key, mode;
     string value;
+
+    // Set show_messages to 0 when taking input using file redirection
+    show_messages = 1;
+
+    if(show_messages) { cout<<"Bucket size : "; }
+    cin>>bucket_size;
+    if(show_messages) { cout<<"Initial global depth : "; }
+    cin>>initial_global_depth;
+
+    Directory d(initial_global_depth,bucket_size);
+    cout<<"Initialized directory structure"<<endl;
+
     do
     {
         choice = menu(show_messages);
@@ -82,7 +81,7 @@ void input_process(Directory d,bool show_messages)
             case 2:
                 if(show_messages) { cout<<"Key : "; }
                 cin>>key;
-                if(show_messages) { cout<<"Mode ( 0-Lazy / 1-Merge empty / 2-Shrink directory / 3-Both merge and shrink ) : "; }
+                if(show_messages) { cout<<"Mode ( 0-Lazy / 1-Merge empty buckets / 2-Shrink directory / 3-Both merge and shrink ) : "; }
                 cin>>mode;
                 if(show_messages) { cout<<endl; }
                 d.remove(key,mode);
@@ -106,6 +105,8 @@ void input_process(Directory d,bool show_messages)
                 break;
         }
     } while(choice!=0);
+
+    return 0;
 }
 
 /* Input choice in main */
@@ -304,7 +305,7 @@ void Directory::display()
 
 /* Bucket class functions */
 
-Bucket::Bucket(int depth, int size=BUCKET_SIZE)
+Bucket::Bucket(int depth, int size)
 {
     this->depth = depth;
     this->size = size;
