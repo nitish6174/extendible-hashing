@@ -178,7 +178,7 @@ void Directory::shrink(void)
 
 void Directory::split(int bucket_no)
 {
-    int local_depth,pair_index;
+    int local_depth,pair_index,index_diff,dir_size,i;
     map<int, string> temp;
     map<int, string>::iterator it;
 
@@ -191,6 +191,12 @@ void Directory::split(int bucket_no)
     buckets[bucket_no]->clear();
     for(it=temp.begin();it!=temp.end();it++)
         insert((*it).first,(*it).second,1);
+    index_diff = 1<<local_depth;
+    dir_size = 1<<global_depth;
+    for( i=pair_index-index_diff ; i>=0 ; i-=index_diff )
+        buckets[i] = buckets[pair_index];
+    for( i=pair_index+index_diff ; i<dir_size ; i+=index_diff )
+        buckets[i] = buckets[pair_index];
 }
 
 void Directory::merge(int bucket_no)
