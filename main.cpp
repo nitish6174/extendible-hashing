@@ -2,11 +2,9 @@
 using namespace std;
 
 
-#define BUCKET_SIZE 1
+#define BUCKET_SIZE 2
 #define INITIAL_GLOBAL_DEPTH 1
 
-
-int menu();
 
 class Bucket {
         int depth,size;
@@ -36,6 +34,7 @@ class Directory {
         void shrink(void);
         void split(int bucket_no);
         void merge(int bucket_no);
+        string display_suffix(int n,int depth);
     public:
         Directory(int depth, int bucket_size);
         void insert(int key,string value);
@@ -46,41 +45,54 @@ class Directory {
 };
 
 
+void input_process(Directory d,bool show_messages);
+int menu(bool show_messages);
+
+
+
+/* Main function */
 
 int main()
 {
     Directory d(INITIAL_GLOBAL_DEPTH,BUCKET_SIZE);
+    input_process(d,1);
+    return 0;
+}
+
+/* Utility function to take input and call function accordingly */
+
+void input_process(Directory d,bool show_messages)
+{
     int choice, key, mode;
     string value;
-
     do
     {
-        choice = menu();
+        choice = menu(show_messages);
         switch(choice)
         {
             case 1:
-                cout<<"Key : ";
+                if(show_messages) { cout<<"Key : "; }
                 cin>>key;
-                cout<<"Value : ";
+                if(show_messages) { cout<<"Value : "; }
                 cin>>value;
                 d.insert(key,value);
                 break;
             case 2:
-                cout<<"Key : ";
+                if(show_messages) { cout<<"Key : "; }
                 cin>>key;
-                cout<<"Mode ( 0-Lazy / 1-Merge empty / 2-Shrink directory / 3-Both merge and shrink ) : ";
+                if(show_messages) { cout<<"Mode ( 0-Lazy / 1-Merge empty / 2-Shrink directory / 3-Both merge and shrink ) : "; }
                 cin>>mode;
                 d.remove(key,mode);
                 break;
             case 3:
-                cout<<"Key : ";
+                if(show_messages) { cout<<"Key : "; }
                 cin>>key;
-                cout<<"Value : ";
+                if(show_messages) { cout<<"Value : "; }
                 cin>>value;
                 d.update(key,value);
                 break;
             case 4:
-                cout<<"Key : ";
+                if(show_messages) { cout<<"Key : "; }
                 cin>>key;
                 d.search(key);
                 break;
@@ -89,27 +101,26 @@ int main()
                 break;
         }
     } while(choice!=0);
-
-    return 0;
 }
 
+/* Input choice in main */
 
-
-/* Display choices in main */
-
-int menu()
+int menu(bool show_messages)
 {
     int choice;
-    cout<<"-----"<<endl;
-    cout<<"0) Exit"<<endl;
-    cout<<"1) Insert data"<<endl;
-    cout<<"2) Delete data"<<endl;
-    cout<<"3) Update data"<<endl;
-    cout<<"4) Search data"<<endl;
-    cout<<"5) Display directory"<<endl;
-    cout<<"Insert choice : ";
+    if(show_messages)
+    {
+        cout<<"-----"<<endl;
+        cout<<"0) Exit"<<endl;
+        cout<<"1) Insert data"<<endl;
+        cout<<"2) Delete data"<<endl;
+        cout<<"3) Update data"<<endl;
+        cout<<"4) Search data"<<endl;
+        cout<<"5) Display directory"<<endl;
+        cout<<"Insert choice : ";
+    }
     cin>>choice;
-    cout<<endl;
+    if(show_messages) { cout<<endl; }
     return choice;
 }
 
@@ -198,6 +209,23 @@ void Directory::merge(int bucket_no)
     }
 }
 
+string Directory::display_suffix(int n,int depth)
+{
+    string s = "";
+    while(n>0 && depth>0)
+    {
+        s = (n%2==0?"0":"1")+s;
+        n/=2;
+        depth--;
+    }
+    while(depth>0)
+    {
+        s = "0"+s;
+        depth--;
+    }
+    return s;
+}
+
 void Directory::insert(int key,string value)
 {
     int bucket_no = hash(key);
@@ -237,11 +265,21 @@ void Directory::search(int key)
 
 void Directory::display()
 {
-    cout<<"Displaying directory (global depth="<<global_depth<<"):"<<endl;
-    for(int i=0;i<buckets.size();i++)
+    int i,d;
+    string s;
+    std::set<string> shown;
+    cout<<"Bucket size : "<<bucket_size<<endl;
+    cout<<"Global depth : "<<global_depth<<endl;
+    for(i=0;i<buckets.size();i++)
     {
-        cout<<"  Bucket "<<i<<" (depth="<<buckets[i]->getDepth()<<") : ";
-        buckets[i]->display();
+        d = buckets[i]->getDepth();
+        s = display_suffix(i,d);
+        if(shown.find(s)==shown.end())
+        {
+            shown.insert(s);
+            cout<<"  "<<s<<" => ";
+            buckets[i]->display();
+        }
     }
 }
 
