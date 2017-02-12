@@ -34,10 +34,10 @@ class Directory {
         void shrink(void);
         void split(int bucket_no);
         void merge(int bucket_no);
-        string display_suffix(int n,int depth);
+        string bucket_id(int n);
     public:
         Directory(int depth, int bucket_size);
-        void insert(int key,string value);
+        void insert(int key,string value,bool reinserted);
         void remove(int key,int mode);
         void update(int key, string value);
         void search(int key);
@@ -68,6 +68,7 @@ void input_process(Directory d,bool show_messages)
     do
     {
         choice = menu(show_messages);
+        cout<<endl;
         switch(choice)
         {
             case 1:
@@ -75,13 +76,15 @@ void input_process(Directory d,bool show_messages)
                 cin>>key;
                 if(show_messages) { cout<<"Value : "; }
                 cin>>value;
-                d.insert(key,value);
+                if(show_messages) { cout<<endl; }
+                d.insert(key,value,0);
                 break;
             case 2:
                 if(show_messages) { cout<<"Key : "; }
                 cin>>key;
                 if(show_messages) { cout<<"Mode ( 0-Lazy / 1-Merge empty / 2-Shrink directory / 3-Both merge and shrink ) : "; }
                 cin>>mode;
+                if(show_messages) { cout<<endl; }
                 d.remove(key,mode);
                 break;
             case 3:
@@ -89,11 +92,13 @@ void input_process(Directory d,bool show_messages)
                 cin>>key;
                 if(show_messages) { cout<<"Value : "; }
                 cin>>value;
+                if(show_messages) { cout<<endl; }
                 d.update(key,value);
                 break;
             case 4:
                 if(show_messages) { cout<<"Key : "; }
                 cin>>key;
+                if(show_messages) { cout<<endl; }
                 d.search(key);
                 break;
             case 5:
@@ -110,7 +115,7 @@ int menu(bool show_messages)
     int choice;
     if(show_messages)
     {
-        cout<<"-----"<<endl;
+        cout<<"\n----------"<<endl;
         cout<<"0) Exit"<<endl;
         cout<<"1) Insert data"<<endl;
         cout<<"2) Delete data"<<endl;
@@ -120,7 +125,6 @@ int menu(bool show_messages)
         cout<<"Insert choice : ";
     }
     cin>>choice;
-    if(show_messages) { cout<<endl; }
     return choice;
 }
 
@@ -185,7 +189,7 @@ void Directory::split(int bucket_no)
     temp = buckets[bucket_no]->copy();
     buckets[bucket_no]->clear();
     for(it=temp.begin();it!=temp.end();it++)
-        insert((*it).first,(*it).second);
+        insert((*it).first,(*it).second,1);
 }
 
 void Directory::merge(int bucket_no)
@@ -209,30 +213,40 @@ void Directory::merge(int bucket_no)
     }
 }
 
-string Directory::display_suffix(int n,int depth)
+string Directory::bucket_id(int n)
 {
-    string s = "";
-    while(n>0 && depth>0)
+    int d;
+    string s;
+    d = buckets[n]->getDepth();
+    s = "";
+    while(n>0 && d>0)
     {
         s = (n%2==0?"0":"1")+s;
         n/=2;
-        depth--;
+        d--;
     }
-    while(depth>0)
+    while(d>0)
     {
         s = "0"+s;
-        depth--;
+        d--;
     }
     return s;
 }
 
-void Directory::insert(int key,string value)
+void Directory::insert(int key,string value,bool reinserted)
 {
     int bucket_no = hash(key);
-    if(!(buckets[bucket_no]->insert(key,value)))
+    if(buckets[bucket_no]->insert(key,value))
+    {
+        if(!reinserted)
+            cout<<"Inserted key "<<key<<" in bucket "<<bucket_id(bucket_no)<<endl;
+        else
+            cout<<"Moved key "<<key<<" to bucket "<<bucket_id(bucket_no)<<endl;
+    }
+    else
     {
         split(bucket_no);
-        insert(key,value);
+        insert(key,value,reinserted);
     }
 }
 
@@ -240,6 +254,7 @@ void Directory::remove(int key,int mode)
 {
     int bucket_no = hash(key);
     buckets[bucket_no]->remove(key);
+    cout<<"Deleted key "<<key<<" from bucket "<<bucket_id(bucket_no)<<endl;
     if(mode==1||mode==3)
     {
         if(buckets[bucket_no]->isEmpty() && buckets[bucket_no]->getDepth()>1)
@@ -260,24 +275,26 @@ void Directory::update(int key, string value)
 void Directory::search(int key)
 {
     int bucket_no = hash(key);
+    cout<<"Searching key "<<key<<" in bucket "<<bucket_id(bucket_no)<<endl;
     buckets[bucket_no]->search(key);
 }
 
 void Directory::display()
 {
-    int i,d;
+    int i,j,d;
     string s;
     std::set<string> shown;
-    cout<<"Bucket size : "<<bucket_size<<endl;
     cout<<"Global depth : "<<global_depth<<endl;
     for(i=0;i<buckets.size();i++)
     {
         d = buckets[i]->getDepth();
-        s = display_suffix(i,d);
+        s = bucket_id(i);
         if(shown.find(s)==shown.end())
         {
             shown.insert(s);
-            cout<<"  "<<s<<" => ";
+            for(j=d;j<=global_depth;j++)
+                cout<<" ";
+            cout<<s<<" => ";
             buckets[i]->display();
         }
     }
@@ -324,6 +341,7 @@ int Bucket::update(int key, string value)
     if(it!=values.end())
     {
         values[key] = value;
+        cout<<"Value updated"<<endl;
         return 1;
     }
     else
@@ -339,7 +357,7 @@ void Bucket::search(int key)
     it = values.find(key);
     if(it!=values.end())
     {
-        cout<<it->second<<endl;
+        cout<<"Value = "<<it->second<<endl;
     }
     else
     {
