@@ -243,17 +243,22 @@ string Directory::bucket_id(int n)
 void Directory::insert(int key,string value,bool reinserted)
 {
     int bucket_no = hash(key);
-    if(buckets[bucket_no]->insert(key,value))
+    int status = buckets[bucket_no]->insert(key,value);
+    if(status==1)
     {
         if(!reinserted)
             cout<<"Inserted key "<<key<<" in bucket "<<bucket_id(bucket_no)<<endl;
         else
             cout<<"Moved key "<<key<<" to bucket "<<bucket_id(bucket_no)<<endl;
     }
-    else
+    else if(status==0)
     {
         split(bucket_no);
         insert(key,value,reinserted);
+    }
+    else
+    {
+        cout<<"Key "<<key<<" already exists in bucket "<<bucket_id(bucket_no)<<endl;
     }
 }
 
@@ -319,6 +324,10 @@ Bucket::Bucket(int depth, int size)
 
 int Bucket::insert(int key, string value)
 {
+    std::map<int,string>::iterator it;
+    it = values.find(key);
+    if(it!=values.end())
+        return -1;
     if(isFull())
         return 0;
     values[key] = value;
