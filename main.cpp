@@ -37,24 +37,27 @@ class Directory {
         void remove(int key,int mode);
         void update(int key, string value);
         void search(int key);
-        void display(void);
+        void display(bool duplicates);
 };
 
 
-int menu(bool show_messages);
+void menu();
 
 
 /* Main function */
 
 int main()
 {
-    bool show_messages;
+    bool show_messages, show_duplicate_buckets;
     int bucket_size, initial_global_depth;
-    int choice, key, mode;
-    string value;
+    int key, mode;
+    string choice, value;
 
     // Set show_messages to 0 when taking input using file redirection
-    show_messages = 1;
+    show_messages = 0;
+
+    // Set show_duplicate_buckets to 1 to see all pointers instead of unique ones
+    show_duplicate_buckets = 0;
 
     if(show_messages) { cout<<"Bucket size : "; }
     cin>>bucket_size;
@@ -62,71 +65,63 @@ int main()
     cin>>initial_global_depth;
 
     Directory d(initial_global_depth,bucket_size);
-    cout<<"Initialized directory structure"<<endl;
+    cout<<endl<<"Initialized directory structure"<<endl;
+
+    if(show_messages)
+        menu();
 
     do
     {
-        choice = menu(show_messages);
         cout<<endl;
-        switch(choice)
+        if(show_messages) { cout<<">>> "; }
+        cin>>choice;
+        if(choice=="insert")
         {
-            case 1:
-                if(show_messages) { cout<<"Key : "; }
-                cin>>key;
-                if(show_messages) { cout<<"Value : "; }
-                cin>>value;
-                if(show_messages) { cout<<endl; }
-                d.insert(key,value,0);
-                break;
-            case 2:
-                if(show_messages) { cout<<"Key : "; }
-                cin>>key;
-                if(show_messages) { cout<<"Mode ( 0-Lazy / 1-Merge empty buckets / 2-Shrink directory / 3-Both merge and shrink ) : "; }
-                cin>>mode;
-                if(show_messages) { cout<<endl; }
-                d.remove(key,mode);
-                break;
-            case 3:
-                if(show_messages) { cout<<"Key : "; }
-                cin>>key;
-                if(show_messages) { cout<<"Value : "; }
-                cin>>value;
-                if(show_messages) { cout<<endl; }
-                d.update(key,value);
-                break;
-            case 4:
-                if(show_messages) { cout<<"Key : "; }
-                cin>>key;
-                if(show_messages) { cout<<endl; }
-                d.search(key);
-                break;
-            case 5:
-                d.display();
-                break;
+            cin>>key>>value;
+            if(show_messages) { cout<<endl; }
+            d.insert(key,value,0);
         }
-    } while(choice!=0);
+        else if(choice=="delete")
+        {
+            cin>>key>>mode;
+            if(show_messages) { cout<<endl; }
+            d.remove(key,mode);
+        }
+        else if(choice=="update")
+        {
+            cin>>key>>value;
+            if(show_messages) { cout<<endl; }
+            d.update(key,value);
+        }
+        else if(choice=="search")
+        {
+            cin>>key;
+            if(show_messages) { cout<<endl; }
+            d.search(key);
+        }
+        else if(choice=="display")
+        {
+            if(show_messages) { cout<<endl; }
+            d.display(show_duplicate_buckets);
+        }
+    } while(choice!="exit");
 
     return 0;
 }
 
-/* Input choice in main */
+/* Print usage menu */
 
-int menu(bool show_messages)
+void menu()
 {
-    int choice;
-    if(show_messages)
-    {
-        cout<<"\n----------"<<endl;
-        cout<<"0) Exit"<<endl;
-        cout<<"1) Insert data"<<endl;
-        cout<<"2) Delete data"<<endl;
-        cout<<"3) Update data"<<endl;
-        cout<<"4) Search data"<<endl;
-        cout<<"5) Display directory"<<endl;
-        cout<<"Insert choice : ";
-    }
-    cin>>choice;
-    return choice;
+    cout<<"--------------------"<<endl;
+    cout<<"Enter queries in the following format :"<<endl;
+    cout<<"insert <key> <value>     (key: integer, value: string)"<<endl;
+    cout<<"delete <key> <mode>      (mode: 0-Lazy / 1-Merge empty buckets / 2-Merge buckets and shrink )"<<endl;
+    cout<<"update <key> <new value>"<<endl;
+    cout<<"search <key>"<<endl;
+    cout<<"display"<<endl;
+    cout<<"exit"<<endl;
+    cout<<"--------------------"<<endl;
 }
 
 
@@ -189,14 +184,14 @@ void Directory::split(int bucket_no)
     buckets[pair_index] = new Bucket(local_depth,bucket_size);
     temp = buckets[bucket_no]->copy();
     buckets[bucket_no]->clear();
-    for(it=temp.begin();it!=temp.end();it++)
-        insert((*it).first,(*it).second,1);
     index_diff = 1<<local_depth;
     dir_size = 1<<global_depth;
     for( i=pair_index-index_diff ; i>=0 ; i-=index_diff )
         buckets[i] = buckets[pair_index];
     for( i=pair_index+index_diff ; i<dir_size ; i+=index_diff )
         buckets[i] = buckets[pair_index];
+    for(it=temp.begin();it!=temp.end();it++)
+        insert((*it).first,(*it).second,1);
 }
 
 void Directory::merge(int bucket_no)
@@ -265,14 +260,14 @@ void Directory::insert(int key,string value,bool reinserted)
 void Directory::remove(int key,int mode)
 {
     int bucket_no = hash(key);
-    buckets[bucket_no]->remove(key);
-    cout<<"Deleted key "<<key<<" from bucket "<<bucket_id(bucket_no)<<endl;
-    if(mode==1||mode==3)
+    if(buckets[bucket_no]->remove(key))
+        cout<<"Deleted key "<<key<<" from bucket "<<bucket_id(bucket_no)<<endl;
+    if(mode>0)
     {
         if(buckets[bucket_no]->isEmpty() && buckets[bucket_no]->getDepth()>1)
             merge(bucket_no);
     }
-    if(mode==2||mode==3)
+    if(mode>1)
     {
         shrink();
     }
@@ -291,7 +286,7 @@ void Directory::search(int key)
     buckets[bucket_no]->search(key);
 }
 
-void Directory::display()
+void Directory::display(bool duplicates)
 {
     int i,j,d;
     string s;
@@ -301,7 +296,7 @@ void Directory::display()
     {
         d = buckets[i]->getDepth();
         s = bucket_id(i);
-        if(shown.find(s)==shown.end())
+        if(duplicates || shown.find(s)==shown.end())
         {
             shown.insert(s);
             for(j=d;j<=global_depth;j++)
